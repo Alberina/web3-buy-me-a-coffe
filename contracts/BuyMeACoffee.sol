@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
-contract BuyMeACoffe {
+contract BuyMeACoffee {
     //event to emit when a memo is created
     event newMemo(
         address indexed from,
@@ -59,14 +59,14 @@ contract BuyMeACoffe {
     /**
      * @dev send the balance to the owner
      */
-    function widthdrawTips() public {
+    function withdrawTips() public {
         require(owner.send(address(this).balance));
     }
 
     /**
      * @dev retrive all the memos
      */
-    function getMemos () public returns(Memo [] memory) {
+    function getMemos () public view returns(Memo [] memory) {
         return memos;
     }
   

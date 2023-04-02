@@ -4,10 +4,13 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-const hre = require("hardhat");
+// const hre = require("hardhat");
+const {ethers} = require("hardhat")
+// import {ethers} from "hardhat"
+
 
 async function getBalance(address){
-  const balanceBigInt = await hre.waffle.provider.getBalance(address);
+  const balanceBigInt = await ethers.provider.getBalance(address);
   return hre.ethers.utils.formatEther(balanceBigInt);
 }
 
@@ -25,26 +28,47 @@ async function printMemos(memos){
     const tipper = memo.name;
     const tipperAddress = memo.from;
     const message = memo.message;
-    console.log(`At ${message}, ${tipper},(${tipperAddress}) said: "${message}"`);
+    console.log(`At ${timestamp}, ${tipper},(${tipperAddress}) said: "${message}"`);
   }
 }
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  //get example accounts
+  const [owner, tipper, tipper2, tipper3] = await hre.ethers.getSigners();
 
-  const lockedAmount = hre.ethers.utils.parseEther("0.001");
+  //get the contract to deploy
+  const BuyMeACoffe = await hre.ethers.getContractFactory("BuyMeACoffee");
+  const buyMeACoffe = await BuyMeACoffe.deploy();
+  await buyMeACoffe.deployed();
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  console.log("Buy me a coffe deployed ", buyMeACoffe.address);
 
-  await lock.deployed();
+  //check the balances before coffee purchase
+  const addresses = [owner.address, tipper.address, buyMeACoffe.address];
+  console.log("== start ==");
+  await printBalances(addresses);
 
-  console.log(
-    `Lock with ${ethers.utils.formatEther(
-      lockedAmount
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
-  );
+  //buy the owner some coffees
+  const tip = {value: hre.ethers.utils.parseEther("1")}
+  await buyMeACoffe.connect(tipper).buyCoffe("Alberina", "message", tip);
+  await buyMeACoffe.connect(tipper2).buyCoffe("Albeirna 1", "message 1", tip);
+  await buyMeACoffe.connect(tipper3).buyCoffe("Alberina 2", "message 2", tip);
+
+  //check the balance after the purchase
+  console.log("== bought coffee ==");
+  await printBalances(addresses);
+
+  //withdraw funds
+  await buyMeACoffe.connect(owner).withdrawTips();
+
+  //after withdraw
+  console.log("== after withdraw ==");
+  await printBalances(addresses);
+
+  //print memos
+  console.log("== memos ==");
+  const memos = await buyMeACoffe.getMemos();
+  printMemos(memos);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
